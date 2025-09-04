@@ -1,0 +1,4 @@
+rootProject.name = 'demo'
+include 'demo-payment-company'
+include 'demo-token-company'
+include 'demo-issuer-company'
