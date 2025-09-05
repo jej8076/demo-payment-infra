@@ -33,7 +33,7 @@ public class Payment {
   private BigDecimal amount;
 
   @Column(nullable = false)
-  private String merchantId;
+  private String sellerId;
 
   @Enumerated(EnumType.STRING)
   private PaymentStatus status;
@@ -41,12 +41,12 @@ public class Payment {
   private LocalDateTime createdAt;
 
   @Builder
-  public Payment(String ci, String cardRefId, BigDecimal amount, String merchantId) {
+  public Payment(String ci, String cardRefId, BigDecimal amount, String sellerId) {
     this.ci = ci;
     this.cardRefId = cardRefId;
     this.amount = amount;
-    this.merchantId = merchantId;
-    this.status = PaymentStatus.PENDING;
+    this.sellerId = sellerId;
+    this.status = PaymentStatus.REQUEST;
     this.createdAt = LocalDateTime.now();
   }
 

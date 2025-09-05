@@ -8,5 +8,5 @@ public class PaymentRequest {
     private String ci;
     private String cardRefId;
     private BigDecimal amount;
-    private String merchantId;
+    private String sellerId;
 }

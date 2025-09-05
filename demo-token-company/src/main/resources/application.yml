@@ -1,18 +1,19 @@
 server:
-  port: 8082
+  port: 8001
 
 spring:
   datasource:
-    url: jdbc:h2:mem:token
+    url: jdbc:h2:file:./data/token-db;DB_CLOSE_ON_EXIT=FALSE
     driver-class-name: org.h2.Driver
     username: sa
     password:
-  
-  jpa:
-    hibernate:
-      ddl-auto: create-drop
-    show-sql: true
-  
+
   h2:
     console:
-      enabled: true
+      enabled: false
+      path: /h2-console
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true

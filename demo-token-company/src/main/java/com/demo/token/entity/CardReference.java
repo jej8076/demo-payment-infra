@@ -7,6 +7,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import java.time.LocalDateTime;
 import lombok.AccessLevel;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
@@ -27,6 +28,7 @@ public class CardReference {
 
   private LocalDateTime createdAt;
 
+  @Builder
   public CardReference(String cardRefId, String encryptedCardInfo) {
     this.cardRefId = cardRefId;
     this.encryptedCardInfo = encryptedCardInfo;

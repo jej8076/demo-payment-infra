@@ -1,5 +1,6 @@
 package com.demo.token.service;
 
+import com.demo.token.dto.CardReferenceResponse;
 import com.demo.token.entity.CardReference;
 import com.demo.token.entity.Token;
 import com.demo.token.repository.CardReferenceRepository;
@@ -21,16 +22,23 @@ public class TokenService {
     this.cardReferenceRepository = cardReferenceRepository;
     this.tokenRepository = tokenRepository;
     this.restClient = restClient
-        .baseUrl("http://localhost:8083")
+        .baseUrl("http://localhost:8002")
         .build();
   }
 
   @Transactional
-  public String createCardReference(String encryptedCardInfo) {
+  public CardReferenceResponse createCardReference(String encryptedCardInfo) {
+
     String cardRefId = "card_ref_" + UUID.randomUUID();
-    CardReference cardReference = new CardReference(cardRefId, encryptedCardInfo);
-    cardReferenceRepository.save(cardReference);
-    return cardRefId;
+
+    CardReference cardReference = CardReference.builder()
+        .cardRefId(cardRefId)
+        .encryptedCardInfo(encryptedCardInfo)
+        .build();
+    CardReference response = cardReferenceRepository.save(cardReference);
+    return CardReferenceResponse.builder()
+        .cardRefId(response.getCardRefId())
+        .build();
   }
 
   @Transactional
@@ -38,30 +46,29 @@ public class TokenService {
     CardReference cardRef = cardReferenceRepository.findByCardRefId(cardRefId)
         .orElseThrow(() -> new RuntimeException("Card reference not found"));
 
-    String tokenValue = "token_" + UUID.randomUUID().toString();
-    Token token = new Token(tokenValue, cardRefId);
+    // TODO 책임 분리해야함
+    String tokenValue = "token-" + cardRef + UUID.randomUUID();
+
+    Token token = Token.builder()
+        .cardRefId(cardRef.getCardRefId())
+        .tokenValue(tokenValue)
+        .build();
     tokenRepository.save(token);
 
-    // Issuer에 토큰 승인 요청
-    boolean approved = requestTokenApproval(tokenValue, cardRef.getEncryptedCardInfo());
-
-    if (approved) {
-      return tokenValue;
-    } else {
-      throw new RuntimeException("Token approval failed");
-    }
+    return tokenValue;
   }
 
-  private boolean requestTokenApproval(String tokenValue, String encryptedCardInfo) {
-    try {
-      String result = restClient.post()
-          .uri("/issuer/approve-token")
-          .body(tokenValue)
-          .retrieve()
-          .body(String.class);
-      return "approved".equals(result);
-    } catch (Exception e) {
-      return true; // 데모용으로 항상 승인
+  @Transactional
+  public String verifyToken(String token) {
+    Token tokenEntity = tokenRepository.findByTokenValue(token)
+        .orElseThrow(() -> new RuntimeException("Token not found"));
+
+    if (tokenEntity.isUsed()) {
+      throw new RuntimeException("already used token ->" + token);
     }
+
+    tokenEntity.changeUsed();
+    tokenRepository.save(tokenEntity);
+    return "success";
   }
 }
