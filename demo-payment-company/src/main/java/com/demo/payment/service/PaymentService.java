@@ -4,6 +4,8 @@ import com.demo.payment.dto.CardReferenceResponse;
 import com.demo.payment.dto.CardRegistryRequest;
 import com.demo.payment.dto.CardRegistryResponse;
 import com.demo.payment.dto.PaymentRequest;
+import com.demo.payment.dto.encrypt.HybridPayload;
+import com.demo.payment.encrypt.HybridEncryptor;
 import com.demo.payment.entity.Payment;
 import com.demo.payment.enums.PaymentStatus;
 import com.demo.payment.repository.PaymentRepository;
@@ -16,13 +18,15 @@ import org.springframework.web.client.RestClient;
 public class PaymentService {
 
   private final PaymentRepository paymentRepository;
+  private final HybridEncryptor hybridEncryptor;
   private final RestClient tokenRestClient;
   private final RestClient issuerRestClient;
 
-  public PaymentService(PaymentRepository paymentRepository,
+  public PaymentService(PaymentRepository paymentRepository, HybridEncryptor hybridEncryptor,
       @Qualifier("tokenRestClient") RestClient tokenClient,
       @Qualifier("issuerRestClient") RestClient issuerClient) {
     this.paymentRepository = paymentRepository;
+    this.hybridEncryptor = hybridEncryptor;
     this.tokenRestClient = tokenClient;
     this.issuerRestClient = issuerClient;
   }
@@ -39,13 +43,13 @@ public class PaymentService {
    */
   @Transactional
   public CardRegistryResponse registerCard(CardRegistryRequest request) {
-    // TODO 카드번호에 대해 Luhn 알고리즘을 이용하여 validation, 만약 암호화되어 전달받는다면 validation 하지 못하고 토큰 관리사로 bypass 한다
+    // TODO 카드번호에 대해 Luhn 알고리즘을 이용하여 validation
 
     // 카드 번호 암호화
-    String encryptedCardInfo = encryptCardInfo(request);
+    HybridPayload encryptedCardNumber = hybridEncryptor.encrypt(request.getCardNumber());
 
     // 토큰 관리사에 요청
-    CardReferenceResponse cardRefResponse = requestCardRefId(encryptedCardInfo);
+    CardReferenceResponse cardRefResponse = requestCardRefId(encryptedCardNumber);
 
     return CardRegistryResponse.builder()
         .cardRefId(cardRefResponse.getCardRefId())
@@ -89,16 +93,15 @@ public class PaymentService {
     return "";
   }
 
-  private String encryptCardInfo(CardRegistryRequest request) {
-    // TODO 암호화하여 응답하도록 수정 필요
-    return "encrypted_" + request.getCardNumber();
+  private HybridPayload payload(CardRegistryRequest request) {
+    return hybridEncryptor.encrypt(request.getCardNumber());
   }
 
-  private CardReferenceResponse requestCardRefId(String encryptedCardInfo) {
+  private CardReferenceResponse requestCardRefId(HybridPayload payload) {
     try {
       return tokenRestClient.post()
           .uri("/token/card/reference")
-          .body(encryptedCardInfo)
+          .body(payload)
           .retrieve()
           .body(CardReferenceResponse.class);
 

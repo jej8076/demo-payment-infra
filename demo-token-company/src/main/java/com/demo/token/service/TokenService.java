@@ -1,8 +1,11 @@
 package com.demo.token.service;
 
 import com.demo.token.dto.CardReferenceResponse;
+import com.demo.token.dto.encrypt.HybridPayload;
+import com.demo.token.encrypt.HybridDecryptor;
 import com.demo.token.entity.CardReference;
 import com.demo.token.entity.Token;
+import com.demo.token.exception.CardReferenceException;
 import com.demo.token.repository.CardReferenceRepository;
 import com.demo.token.repository.TokenRepository;
 import java.util.UUID;
@@ -15,25 +18,34 @@ public class TokenService {
 
   private final CardReferenceRepository cardReferenceRepository;
   private final TokenRepository tokenRepository;
+  private final HybridDecryptor hybridDecryptor;
   private final RestClient restClient;
 
   public TokenService(CardReferenceRepository cardReferenceRepository,
-      TokenRepository tokenRepository, RestClient.Builder restClient) {
+      TokenRepository tokenRepository,
+      HybridDecryptor hybridDecryptor,
+      RestClient.Builder restClient) {
     this.cardReferenceRepository = cardReferenceRepository;
     this.tokenRepository = tokenRepository;
+    this.hybridDecryptor = hybridDecryptor;
     this.restClient = restClient
         .baseUrl("http://localhost:8002")
         .build();
   }
 
   @Transactional
-  public CardReferenceResponse createCardReference(String encryptedCardInfo) {
+  public CardReferenceResponse createCardReference(HybridPayload payload) {
+
+    String cardNumber = hybridDecryptor.decrypt(payload);
+
+    if (!cardNumberValidator(cardNumber)) {
+      throw new CardReferenceException("INVALID_CARD_NUMBER cardNumber:%s", cardNumber);
+    }
 
     String cardRefId = "card_ref_" + UUID.randomUUID();
-
     CardReference cardReference = CardReference.builder()
         .cardRefId(cardRefId)
-        .encryptedCardInfo(encryptedCardInfo)
+        .encryptedCardInfo(cardNumber)
         .build();
     CardReference response = cardReferenceRepository.save(cardReference);
     return CardReferenceResponse.builder()
@@ -70,5 +82,14 @@ public class TokenService {
     tokenEntity.changeUsed();
     tokenRepository.save(tokenEntity);
     return "success";
+  }
+
+  private boolean cardNumberValidator(String cardNumber) {
+    // TODO cardNumber에 대한 validation
+    if (cardNumber.length() != 16) {
+      return false;
+    }
+
+    return true;
   }
 }

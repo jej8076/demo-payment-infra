@@ -17,3 +17,8 @@ spring:
     hibernate:
       ddl-auto: update
     show-sql: true
+
+encrypt:
+  rsa:
+    public-key-path: classpath:keys/public.pem
+    private-key-path: classpath:keys/private.pem

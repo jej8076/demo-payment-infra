@@ -1,6 +1,7 @@
 package com.demo.token.controller;
 
 import com.demo.token.dto.CardReferenceResponse;
+import com.demo.token.dto.encrypt.HybridPayload;
 import com.demo.token.service.TokenService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -18,8 +19,8 @@ public class TokenController {
 
   @PostMapping("/card/reference")
   public ResponseEntity<CardReferenceResponse> createCardReference(
-      @RequestBody String encryptedCardInfo) {
-    CardReferenceResponse cardRefResponse = tokenService.createCardReference(encryptedCardInfo);
+      @RequestBody HybridPayload payload) {
+    CardReferenceResponse cardRefResponse = tokenService.createCardReference(payload);
     return ResponseEntity.ok(cardRefResponse);
   }
 
