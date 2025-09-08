@@ -1,9 +1,10 @@
 package com.demo.issuer.enums;
 
-public enum ApprovalStatus {
-  APPROVED, REJECTED;
+public enum Status {
+  SUCCESS, FAIL;
 
   public String lower() {
     return name().toLowerCase();
   }
+
 }

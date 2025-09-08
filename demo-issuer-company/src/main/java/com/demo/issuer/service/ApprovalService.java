@@ -2,6 +2,7 @@ package com.demo.issuer.service;
 
 import com.demo.issuer.entity.TokenApproval;
 import com.demo.issuer.enums.ApprovalStatus;
+import com.demo.issuer.enums.Status;
 import com.demo.issuer.repository.TokenApprovalRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -30,7 +31,7 @@ public class ApprovalService {
   @Transactional
   public String approveToken(String tokenValue) {
 
-    ApprovalStatus status = "success".equals(validateToken(tokenValue)) ?
+    ApprovalStatus status = Status.SUCCESS.lower().equals(validateToken(tokenValue)) ?
         ApprovalStatus.APPROVED : ApprovalStatus.REJECTED;
 
     TokenApproval approval = TokenApproval.builder()
@@ -39,7 +40,8 @@ public class ApprovalService {
         .build();
     tokenApprovalRepository.save(approval);
 
-    return status == ApprovalStatus.APPROVED ? "approved" : "rejected";
+    return status == ApprovalStatus.APPROVED ? ApprovalStatus.APPROVED.lower()
+        : ApprovalStatus.REJECTED.lower();
   }
 
   private String validateToken(String tokenValue) {

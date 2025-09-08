@@ -7,13 +7,22 @@ spring:
     driver-class-name: org.h2.Driver
     username: sa
     password:
-
   jpa:
     hibernate:
       ddl-auto: update
     show-sql: true
-
   h2:
     console:
       enabled: true
       path: /h2-console
+
+springdoc:
+  server:
+    url: http://localhost:${server.port}
+  api-docs:
+    enabled: true   # OpenAPI 문서 활성화
+  swagger-ui:
+    enabled: true   # Swagger UI 활성화
+    default-consumes-media-type: application/json  # 기본 요청 Content-Type 설정 (ex: POST/PUT 요청의 기본 Content-Type)
+    default-produces-media-type: application/json  # 기본 응답 Content-Type 설정 (ex: 응답의 기본 Accept 헤더)
+  paths-to-match: "/issuer/**"
