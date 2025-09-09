@@ -17,4 +17,8 @@ public class CardRegistryRequest {
   private String expiryDate;
   @NotBlank(message = "cvv is required")
   private String cvv;
+
+  public void changeCardNumber(String cardNumber) {
+    this.cardNumber = cardNumber;
+  }
 }

@@ -56,6 +56,9 @@ public class PaymentService {
    */
   @Transactional
   public CardRegistryResponse registerCard(CardRegistryRequest request) {
+
+    ajustCardInfo(request);
+
     // TODO 카드번호에 대해 Luhn 알고리즘을 이용하여 validation
 
     // ${ci}_${cardNumber} 형태
@@ -137,11 +140,11 @@ public class PaymentService {
         );
 
     if (restResponse.isEmpty()) {
-      throw new TokenResponseException("토큰 서비스의 잘못된 응답 -> %s", TOKEN_GENERATE);
+      throw new TokenResponseException("BAD_RESPONSE_TOKEN -> %s", TOKEN_GENERATE);
     }
 
     if (restResponse.get().getCode() != 200) {
-      throw new TokenResponseException("토큰 서비스의 잘못된 응답 message:%s",
+      throw new TokenResponseException("INVALID_RESPONSE_TOKEN message:%s",
           restResponse.get().getMessage());
     }
 
@@ -157,10 +160,16 @@ public class PaymentService {
         );
 
     if (restResponse.isEmpty()) {
-      throw new IssuerResponseException("승인 서비스의 잘못된 응답 -> %s", ISSUER_APPROVE_TOKEN);
+      throw new IssuerResponseException("BAD_RESPONSE_ISSUER -> %s", ISSUER_APPROVE_TOKEN);
     }
 
     return restResponse.get();
+  }
+
+  private void ajustCardInfo(CardRegistryRequest request) {
+    String cardNumber = request.getCardNumber();
+    cardNumber = cardNumber.replace("-", "");
+    request.changeCardNumber(cardNumber);
   }
 
 }

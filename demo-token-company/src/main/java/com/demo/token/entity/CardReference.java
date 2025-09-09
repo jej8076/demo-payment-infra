@@ -38,6 +38,6 @@ public class CardReference {
     this.ci = ci;
     this.cardRefId = cardRefId;
     this.encryptedCardInfo = encryptedCardInfo;
-    this.createdAt = createdAt;
+    this.createdAt = LocalDateTime.now();
   }
 }
