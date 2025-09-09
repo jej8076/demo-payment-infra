@@ -33,7 +33,6 @@ public class ApprovalService {
   @Transactional
   public String approveToken(String tokenValue) {
 
-    // success 혹은 fail
     TokenVerifyResponse validationResult = validateToken(tokenValue);
 
     ApprovalStatus status = Status.SUCCESS.lower().equals(validationResult.getStatus().lower()) ?

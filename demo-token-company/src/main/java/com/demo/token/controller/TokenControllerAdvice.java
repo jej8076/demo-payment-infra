@@ -5,6 +5,7 @@ import static com.demo.token.utils.IpUtils.getClientIp;
 import com.demo.token.dto.TokenVerifyResponse;
 import com.demo.token.dto.common.CommonResponse;
 import com.demo.token.enums.Status;
+import com.demo.token.exception.CardReferenceException;
 import com.demo.token.exception.TokenValidException;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
@@ -21,6 +22,22 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 @RequiredArgsConstructor
 @Slf4j
 public class TokenControllerAdvice {
+
+  @ExceptionHandler(CardReferenceException.class)
+  public ResponseEntity CardReferenceException(HttpServletRequest request,
+      CardReferenceException ex) {
+    log.error("[TOKEN-ERROR] ip={}, message={}", getClientIp(request), ex.getMessage());
+    String message = String.format("Card Reference Id 생성에 실패하였습니다.[%s]", ex.getMessage());
+    return ResponseEntity
+        .status(HttpStatus.BAD_REQUEST)
+        .body(TokenVerifyResponse.builder()
+            .code(HttpStatus.BAD_REQUEST.value())
+            .status(Status.FAIL)
+            .message(message)
+            .build()
+        );
+  }
+
 
   @ExceptionHandler(TokenValidException.class)
   public ResponseEntity TokenValidException(HttpServletRequest request, TokenValidException ex) {

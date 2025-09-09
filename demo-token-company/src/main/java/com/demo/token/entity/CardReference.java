@@ -20,6 +20,9 @@ public class CardReference {
   @GeneratedValue(strategy = GenerationType.IDENTITY)
   private Long id;
 
+  @Column(nullable = false)
+  private String ci;
+
   @Column(unique = true, nullable = false)
   private String cardRefId;
 
@@ -29,9 +32,12 @@ public class CardReference {
   private LocalDateTime createdAt;
 
   @Builder
-  public CardReference(String cardRefId, String encryptedCardInfo) {
+  public CardReference(Long id, String ci, String cardRefId, String encryptedCardInfo,
+      LocalDateTime createdAt) {
+    this.id = id;
+    this.ci = ci;
     this.cardRefId = cardRefId;
     this.encryptedCardInfo = encryptedCardInfo;
-    this.createdAt = LocalDateTime.now();
+    this.createdAt = createdAt;
   }
 }

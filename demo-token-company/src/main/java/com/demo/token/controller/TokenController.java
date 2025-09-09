@@ -1,6 +1,7 @@
 package com.demo.token.controller;
 
 import com.demo.token.dto.CardReferenceResponse;
+import com.demo.token.dto.TokenGenerateRequest;
 import com.demo.token.dto.TokenGenerateResponse;
 import com.demo.token.dto.TokenVerifyResponse;
 import com.demo.token.dto.encrypt.HybridPayload;
@@ -27,8 +28,9 @@ public class TokenController {
   }
 
   @PostMapping("/generate")
-  public ResponseEntity<TokenGenerateResponse> generateToken(@RequestBody String cardRefId) {
-    TokenGenerateResponse tokenGenerateResponse = tokenService.generateToken(cardRefId);
+  public ResponseEntity<TokenGenerateResponse> generateToken(
+      @RequestBody TokenGenerateRequest request) {
+    TokenGenerateResponse tokenGenerateResponse = tokenService.generateToken(request);
     return ResponseEntity.ok(tokenGenerateResponse);
   }
 

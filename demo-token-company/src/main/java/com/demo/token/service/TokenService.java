@@ -1,6 +1,7 @@
 package com.demo.token.service;
 
 import com.demo.token.dto.CardReferenceResponse;
+import com.demo.token.dto.TokenGenerateRequest;
 import com.demo.token.dto.TokenGenerateResponse;
 import com.demo.token.dto.TokenVerifyResponse;
 import com.demo.token.dto.encrypt.HybridPayload;
@@ -23,6 +24,8 @@ public class TokenService {
   private final CardReferenceRepository cardReferenceRepository;
   private final TokenRepository tokenRepository;
   private final HybridDecryptor hybridDecryptor;
+  private final int INDEX_CI = 0;
+  private final int INDEX_CARDNUMBER = 1;
 
   public TokenService(CardReferenceRepository cardReferenceRepository,
       TokenRepository tokenRepository,
@@ -56,14 +59,17 @@ public class TokenService {
   @Transactional
   public CardReferenceResponse createCardReference(HybridPayload payload) {
 
-    String cardNumber = hybridDecryptor.decrypt(payload);
+    String cardInfo = hybridDecryptor.decrypt(payload);
 
-    if (!cardNumberValidator(cardNumber)) {
-      throw new CardReferenceException("INVALID_CARD_NUMBER cardNumber:%s", cardNumber);
+    if (!cardInfoValidator(cardInfo)) {
+      throw new CardReferenceException("INVALID_CARD_NUMBER cardNumber:%s", cardInfo);
     }
+
+    String ci = getCi(cardInfo);
 
     String cardRefId = "card_ref_" + UUID.randomUUID();
     CardReference cardReference = CardReference.builder()
+        .ci(ci)
         .cardRefId(cardRefId)
         .encryptedCardInfo(payload.getEncryptedData())
         .build();
@@ -74,9 +80,11 @@ public class TokenService {
   }
 
   @Transactional
-  public TokenGenerateResponse generateToken(String cardRefId) {
-    CardReference cardRef = cardReferenceRepository.findByCardRefId(cardRefId)
-        .orElseThrow(() -> new RuntimeException("Card reference not found"));
+  public TokenGenerateResponse generateToken(TokenGenerateRequest request) {
+    CardReference cardRef = cardReferenceRepository.findByCiAndCardRefId(request.getCi(),
+            request.getCardRefId())
+        .orElseThrow(() -> new CardReferenceException("card_reference_not_found ci:%s cardRefId:%s",
+            request.getCi(), request.getCardRefId()));
 
     // TODO 책임 분리해야함
     String tokenValue = "token-" + cardRef.getCardRefId() + UUID.randomUUID();
@@ -94,9 +102,19 @@ public class TokenService {
         .build();
   }
 
-  private boolean cardNumberValidator(String cardNumber) {
-    // TODO cardNumber에 대한 validation
-    if (cardNumber.length() != 16) {
+  private String getCi(String cardInfo) {
+    return cardInfo.split("_")[INDEX_CI];
+  }
+
+  private boolean cardInfoValidator(String cardInfo) {
+    String[] test = cardInfo.split("_");
+
+    if (test.length < 2) {
+      return false;
+    }
+
+    // TODO cardNumber에 대한 validation 추가 필요
+    if (test[INDEX_CARDNUMBER].length() != 16) {
       return false;
     }
 

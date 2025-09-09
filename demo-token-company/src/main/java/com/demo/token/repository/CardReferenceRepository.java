@@ -1,9 +1,10 @@
 package com.demo.token.repository;
 
 import com.demo.token.entity.CardReference;
-import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.Optional;
+import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface CardReferenceRepository extends JpaRepository<CardReference, Long> {
-    Optional<CardReference> findByCardRefId(String cardRefId);
+
+  Optional<CardReference> findByCiAndCardRefId(String ci, String cardRefId);
 }

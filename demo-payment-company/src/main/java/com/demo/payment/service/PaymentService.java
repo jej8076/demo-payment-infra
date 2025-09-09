@@ -4,6 +4,7 @@ import com.demo.payment.dto.CardReferenceResponse;
 import com.demo.payment.dto.CardRegistryRequest;
 import com.demo.payment.dto.CardRegistryResponse;
 import com.demo.payment.dto.PaymentRequest;
+import com.demo.payment.dto.TokenGenerateRequest;
 import com.demo.payment.dto.TokenGenerateResponse;
 import com.demo.payment.dto.encrypt.HybridPayload;
 import com.demo.payment.encrypt.HybridEncryptor;
@@ -57,8 +58,11 @@ public class PaymentService {
   public CardRegistryResponse registerCard(CardRegistryRequest request) {
     // TODO 카드번호에 대해 Luhn 알고리즘을 이용하여 validation
 
+    // ${ci}_${cardNumber} 형태
+    String cardInfo = concatCardInfo(request);
+
     // 카드 번호 암호화
-    HybridPayload encryptedCardNumber = hybridEncryptor.encrypt(request.getCardNumber());
+    HybridPayload encryptedCardNumber = hybridEncryptor.encrypt(cardInfo);
 
     // 토큰 관리사에 요청
     CardReferenceResponse cardRefResponse = requestCardRefId(encryptedCardNumber);
@@ -79,9 +83,14 @@ public class PaymentService {
 
     paymentRepository.save(payment);
 
+    TokenGenerateRequest generateRequest = TokenGenerateRequest.builder()
+        .ci(request.getCi())
+        .cardRefId(request.getCardRefId())
+        .build();
+
     // 토큰 요청
     // TODO 실패 시 실패 이유를 응답받도록 해야함
-    TokenGenerateResponse tokenGenerateResponse = requestToken(request.getCardRefId());
+    TokenGenerateResponse tokenGenerateResponse = requestToken(generateRequest);
 
     String approvalState = requestApproval(tokenGenerateResponse.getToken());
 
@@ -99,6 +108,10 @@ public class PaymentService {
     return Status.SUCCESS.lower();
   }
 
+  private String concatCardInfo(CardRegistryRequest request) {
+    return request.getCi() + "_" + request.getCardNumber();
+  }
+
   private CardReferenceResponse requestCardRefId(HybridPayload payload) {
     Optional<CardReferenceResponse> restResponse = tokenRestClient.post()
         .uri(TOKEN_CARD_REF)
@@ -114,10 +127,11 @@ public class PaymentService {
     return restResponse.get();
   }
 
-  private TokenGenerateResponse requestToken(String cardRefId) {
+  private TokenGenerateResponse requestToken(TokenGenerateRequest generateRequest) {
+
     Optional<TokenGenerateResponse> restResponse = tokenRestClient.post()
         .uri(TOKEN_GENERATE)
-        .body(cardRefId)
+        .body(generateRequest)
         .exchange((request, response) ->
             Optional.ofNullable(response.bodyTo(TokenGenerateResponse.class))
         );

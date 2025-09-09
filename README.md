@@ -1,3 +1,5 @@
+### spring docs(payment) : http://localhost:8000/swagger-ui/index.html#/
+
 ## 시퀀스 다이어그램
 
 ```mermaid
