@@ -13,6 +13,7 @@ import com.demo.token.exception.CardReferenceException;
 import com.demo.token.exception.TokenValidException;
 import com.demo.token.repository.CardReferenceRepository;
 import com.demo.token.repository.TokenRepository;
+import java.time.LocalDateTime;
 import java.util.UUID;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -38,13 +39,15 @@ public class TokenService {
   @Transactional
   public TokenVerifyResponse verifyToken(String token) {
     Token tokenEntity = tokenRepository.findByTokenValue(token)
-        .orElseThrow(() -> new TokenValidException("token_not_found token:%s", token));
+        .orElseThrow(() -> new TokenValidException("TOKEN_NOT_FOUND token:%s", token));
 
     if (tokenEntity.isUsed()) {
-      throw new TokenValidException("already_used_token token:%s", token);
+      throw new TokenValidException("ALREADY_USED_TOKEN token:%s", token);
     }
 
-    // TODO expired check
+    if (tokenEntity.getExpiresAt().isAfter(LocalDateTime.now())) {
+      throw new TokenValidException("TOKEN_EXPIRED token:%s", token);
+    }
 
     tokenEntity.changeUsed();
     tokenRepository.save(tokenEntity);
@@ -66,14 +69,15 @@ public class TokenService {
     }
 
     String ci = getCi(cardInfo);
+    String cardRefId = makeCardRefId();
 
-    String cardRefId = "card_ref_" + UUID.randomUUID();
     CardReference cardReference = CardReference.builder()
         .ci(ci)
         .cardRefId(cardRefId)
         .encryptedCardInfo(payload.getEncryptedData())
         .build();
     CardReference response = cardReferenceRepository.save(cardReference);
+
     return CardReferenceResponse.builder()
         .cardRefId(response.getCardRefId())
         .build();
@@ -82,12 +86,11 @@ public class TokenService {
   @Transactional
   public TokenGenerateResponse generateToken(TokenGenerateRequest request) {
     CardReference cardRef = cardReferenceRepository.findByCiAndCardRefId(request.getCi(),
-            request.getCardRefId())
-        .orElseThrow(() -> new CardReferenceException("card_reference_not_found ci:%s cardRefId:%s",
+        request.getCardRefId()).orElseThrow(
+        () -> new CardReferenceException("CARD_REFERENCE_NOT_FOUND ci:%s cardRefId:%s",
             request.getCi(), request.getCardRefId()));
 
-    // TODO 책임 분리해야함
-    String tokenValue = "token-" + cardRef.getCardRefId() + UUID.randomUUID();
+    String tokenValue = makeToken(request.getCardRefId());
 
     Token token = Token.builder()
         .cardRefId(cardRef.getCardRefId())
@@ -102,19 +105,27 @@ public class TokenService {
         .build();
   }
 
+  private String makeToken(String cardRefId) {
+    return "token-" + cardRefId + UUID.randomUUID();
+  }
+
+  private String makeCardRefId() {
+    return "card_ref-" + UUID.randomUUID();
+  }
+
   private String getCi(String cardInfo) {
     return cardInfo.split("_")[INDEX_CI];
   }
 
   private boolean cardInfoValidator(String cardInfo) {
-    String[] test = cardInfo.split("_");
+    String[] cardSplit = cardInfo.split("_");
 
-    if (test.length < 2) {
+    if (cardSplit.length < 2) {
       return false;
     }
 
     // TODO cardNumber에 대한 validation 추가 필요
-    if (test[INDEX_CARDNUMBER].length() != 16) {
+    if (cardSplit[INDEX_CARDNUMBER].length() != 16) {
       return false;
     }
 

@@ -15,7 +15,6 @@ import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
 import org.springframework.stereotype.Component;
 
-// 명시적으로 빈이름을 정해놓음, 해당 빈은 dependsOn 대상임
 @Component("AES128")
 public class AES128 {
 
