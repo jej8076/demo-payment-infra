@@ -1,6 +1,8 @@
 package com.demo.token.service;
 
 import com.demo.token.dto.CardReferenceResponse;
+import com.demo.token.dto.TokenGenerateResponse;
+import com.demo.token.dto.TokenVerifyResponse;
 import com.demo.token.dto.encrypt.HybridPayload;
 import com.demo.token.encrypt.HybridDecryptor;
 import com.demo.token.entity.CardReference;
@@ -11,9 +13,9 @@ import com.demo.token.exception.TokenValidException;
 import com.demo.token.repository.CardReferenceRepository;
 import com.demo.token.repository.TokenRepository;
 import java.util.UUID;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.client.RestClient;
 
 @Service
 public class TokenService {
@@ -21,17 +23,33 @@ public class TokenService {
   private final CardReferenceRepository cardReferenceRepository;
   private final TokenRepository tokenRepository;
   private final HybridDecryptor hybridDecryptor;
-  private final RestClient restClient;
 
   public TokenService(CardReferenceRepository cardReferenceRepository,
       TokenRepository tokenRepository,
-      HybridDecryptor hybridDecryptor,
-      RestClient.Builder restClient) {
+      HybridDecryptor hybridDecryptor) {
     this.cardReferenceRepository = cardReferenceRepository;
     this.tokenRepository = tokenRepository;
     this.hybridDecryptor = hybridDecryptor;
-    this.restClient = restClient
-        .baseUrl("http://localhost:8002")
+  }
+
+  @Transactional
+  public TokenVerifyResponse verifyToken(String token) {
+    Token tokenEntity = tokenRepository.findByTokenValue(token)
+        .orElseThrow(() -> new TokenValidException("token_not_found token:%s", token));
+
+    if (tokenEntity.isUsed()) {
+      throw new TokenValidException("already_used_token token:%s", token);
+    }
+
+    // TODO expired check
+
+    tokenEntity.changeUsed();
+    tokenRepository.save(tokenEntity);
+
+    return TokenVerifyResponse.builder()
+        .code(HttpStatus.OK.value())
+        .status(Status.SUCCESS)
+        .message("")
         .build();
   }
 
@@ -56,7 +74,7 @@ public class TokenService {
   }
 
   @Transactional
-  public String generateToken(String cardRefId) {
+  public TokenGenerateResponse generateToken(String cardRefId) {
     CardReference cardRef = cardReferenceRepository.findByCardRefId(cardRefId)
         .orElseThrow(() -> new RuntimeException("Card reference not found"));
 
@@ -69,23 +87,11 @@ public class TokenService {
         .build();
     tokenRepository.save(token);
 
-    return tokenValue;
-  }
-
-  @Transactional
-  public String verifyToken(String token) {
-    Token tokenEntity = tokenRepository.findByTokenValue(token)
-        .orElseThrow(() -> new TokenValidException("token_not_found token:%s", token));
-
-    if (tokenEntity.isUsed()) {
-      throw new TokenValidException("already_used_token token:%s", token);
-    }
-
-    // TODO expired check
-
-    tokenEntity.changeUsed();
-    tokenRepository.save(tokenEntity);
-    return Status.SUCCESS.lower();
+    return TokenGenerateResponse.builder()
+        .code(HttpStatus.OK.value())
+        .message("")
+        .token(tokenValue)
+        .build();
   }
 
   private boolean cardNumberValidator(String cardNumber) {

@@ -37,8 +37,8 @@ public class Payment {
 
   @Enumerated(EnumType.STRING)
   private PaymentStatus status;
-
   private LocalDateTime createdAt;
+
 
   @Builder
   public Payment(String ci, String cardRefId, BigDecimal amount, String sellerId) {

@@ -1,6 +1,8 @@
 package com.demo.token.controller;
 
 import com.demo.token.dto.CardReferenceResponse;
+import com.demo.token.dto.TokenGenerateResponse;
+import com.demo.token.dto.TokenVerifyResponse;
 import com.demo.token.dto.encrypt.HybridPayload;
 import com.demo.token.service.TokenService;
 import lombok.RequiredArgsConstructor;
@@ -25,15 +27,15 @@ public class TokenController {
   }
 
   @PostMapping("/generate")
-  public ResponseEntity<String> generateToken(@RequestBody String cardRefId) {
-    String token = tokenService.generateToken(cardRefId);
-    return ResponseEntity.ok(token);
+  public ResponseEntity<TokenGenerateResponse> generateToken(@RequestBody String cardRefId) {
+    TokenGenerateResponse tokenGenerateResponse = tokenService.generateToken(cardRefId);
+    return ResponseEntity.ok(tokenGenerateResponse);
   }
 
   @PostMapping("/verify")
-  public ResponseEntity<String> verifyToken(@RequestBody String token) {
-    String message = tokenService.verifyToken(token);
-    return ResponseEntity.ok(message);
+  public ResponseEntity<TokenVerifyResponse> verifyToken(@RequestBody String token) {
+    TokenVerifyResponse verifyToken = tokenService.verifyToken(token);
+    return ResponseEntity.ok(verifyToken);
   }
 
 }

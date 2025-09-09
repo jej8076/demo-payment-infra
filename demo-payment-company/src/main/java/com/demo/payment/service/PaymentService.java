@@ -4,12 +4,17 @@ import com.demo.payment.dto.CardReferenceResponse;
 import com.demo.payment.dto.CardRegistryRequest;
 import com.demo.payment.dto.CardRegistryResponse;
 import com.demo.payment.dto.PaymentRequest;
+import com.demo.payment.dto.TokenGenerateResponse;
 import com.demo.payment.dto.encrypt.HybridPayload;
 import com.demo.payment.encrypt.HybridEncryptor;
 import com.demo.payment.entity.Payment;
 import com.demo.payment.enums.PaymentStatus;
+import com.demo.payment.enums.Status;
+import com.demo.payment.exception.IssuerResponseException;
+import com.demo.payment.exception.TokenResponseException;
 import com.demo.payment.repository.PaymentRepository;
 import jakarta.transaction.Transactional;
+import java.util.Optional;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
@@ -21,6 +26,9 @@ public class PaymentService {
   private final HybridEncryptor hybridEncryptor;
   private final RestClient tokenRestClient;
   private final RestClient issuerRestClient;
+  private final String TOKEN_CARD_REF = "/token/card/reference";
+  private final String TOKEN_GENERATE = "/token/generate";
+  private final String ISSUER_APPROVE_TOKEN = "/issuer/approve/token";
 
   public PaymentService(PaymentRepository paymentRepository, HybridEncryptor hybridEncryptor,
       @Qualifier("tokenRestClient") RestClient tokenClient,
@@ -34,8 +42,12 @@ public class PaymentService {
   /**
    * <pre>
    * 조건 : 카드정보는 페이 결제사에서 볼 수 없으며 암호화하여 토큰관리사에게 전달한다
-   * 페이결제사(현재 모듈)에서 카드정보를 볼 수 없도록 하려면 페이 결제사에 카드 정보 데이터가 전달되기 전
-   * 암호화 모듈이 있어야 할 것으로 생각된다
+   * 구현 :
+   * 1. 암호화는 RSA(서명 역할)와 AES128(암호화역할)를 조합하여 사용하도록 한다
+   * 2. 페이결제사에서는 IV,KEY 값을 갖고 있지 않고 즉시 생성하여 전달하기 때문에 보관 시 유출될 가능성을 없앴다
+   * 3. 페이결제사에서는 RSA의 공개키만 가지고 있기 때문에 복호화가 불가능한 상태
+   * 4. 토큰관리사에서 RSA 비밀키를 가지고 있기 때문에 복호화하여 카드정보 확인 가능
+   * 5. 페이결제사에서 IV,KEY값도 토큰관리사에게 함께 전달하기 때문에 복호화하여 카드정보 확인 가능
    * </pre>
    *
    * @param request
@@ -69,17 +81,11 @@ public class PaymentService {
 
     // 토큰 요청
     // TODO 실패 시 실패 이유를 응답받도록 해야함
-    String token = requestToken(request.getCardRefId());
+    TokenGenerateResponse tokenGenerateResponse = requestToken(request.getCardRefId());
 
-    if (token == null) {
-      payment.changeStatus(PaymentStatus.REJECTED);
-      paymentRepository.save(payment);
-      return "fail";
-    }
+    String approvalState = requestApproval(tokenGenerateResponse.getToken());
 
-    String approvalState = requestApproval(token);
-
-    if ("fail".equals(approvalState)) {
+    if (Status.FAIL.lower().equals(approvalState)) {
       payment.changeStatus(PaymentStatus.REJECTED);
       paymentRepository.save(payment);
       return approvalState;
@@ -90,48 +96,57 @@ public class PaymentService {
     // 명시적으로 영속성 컨텍스트에 입력함 (dirty checking은 누군가에게 오해받을 수 있기 때문)
     paymentRepository.save(payment);
 
-    return "";
-  }
-
-  private HybridPayload payload(CardRegistryRequest request) {
-    return hybridEncryptor.encrypt(request.getCardNumber());
+    return Status.SUCCESS.lower();
   }
 
   private CardReferenceResponse requestCardRefId(HybridPayload payload) {
-    try {
-      return tokenRestClient.post()
-          .uri("/token/card/reference")
-          .body(payload)
-          .retrieve()
-          .body(CardReferenceResponse.class);
+    Optional<CardReferenceResponse> restResponse = tokenRestClient.post()
+        .uri(TOKEN_CARD_REF)
+        .body(payload)
+        .exchange((request, response) ->
+            Optional.ofNullable(response.bodyTo(CardReferenceResponse.class))
+        );
 
-    } catch (Exception e) {
-      throw new RuntimeException();
+    if (restResponse.isEmpty()) {
+      throw new TokenResponseException("토큰 서비스의 잘못된 응답 -> %s", TOKEN_CARD_REF);
     }
+
+    return restResponse.get();
   }
 
-  private String requestToken(String cardRefId) {
-    try {
-      return tokenRestClient.post()
-          .uri("/token/generate")
-          .body(cardRefId)
-          .retrieve()
-          .body(String.class);
-    } catch (Exception e) {
-      throw new RuntimeException();
+  private TokenGenerateResponse requestToken(String cardRefId) {
+    Optional<TokenGenerateResponse> restResponse = tokenRestClient.post()
+        .uri(TOKEN_GENERATE)
+        .body(cardRefId)
+        .exchange((request, response) ->
+            Optional.ofNullable(response.bodyTo(TokenGenerateResponse.class))
+        );
+
+    if (restResponse.isEmpty()) {
+      throw new TokenResponseException("토큰 서비스의 잘못된 응답 -> %s", TOKEN_GENERATE);
     }
+
+    if (restResponse.get().getCode() != 200) {
+      throw new TokenResponseException("토큰 서비스의 잘못된 응답 message:%s",
+          restResponse.get().getMessage());
+    }
+
+    return restResponse.get();
   }
 
   private String requestApproval(String cardRefId) {
-    try {
-      return issuerRestClient.post()
-          .uri("/issuer/approve/token")
-          .body(cardRefId)
-          .retrieve()
-          .body(String.class);
-    } catch (Exception e) {
-      throw new RuntimeException();
+    Optional<String> restResponse = issuerRestClient.post()
+        .uri(ISSUER_APPROVE_TOKEN)
+        .body(cardRefId)
+        .exchange((request, response) ->
+            Optional.ofNullable(response.bodyTo(String.class))
+        );
+
+    if (restResponse.isEmpty()) {
+      throw new IssuerResponseException("승인 서비스의 잘못된 응답 -> %s", ISSUER_APPROVE_TOKEN);
     }
+
+    return restResponse.get();
   }
 
 }

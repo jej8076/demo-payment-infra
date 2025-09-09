@@ -2,7 +2,9 @@ package com.demo.token.controller;
 
 import static com.demo.token.utils.IpUtils.getClientIp;
 
+import com.demo.token.dto.TokenVerifyResponse;
 import com.demo.token.dto.common.CommonResponse;
+import com.demo.token.enums.Status;
 import com.demo.token.exception.TokenValidException;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
@@ -23,16 +25,16 @@ public class TokenControllerAdvice {
   @ExceptionHandler(TokenValidException.class)
   public ResponseEntity TokenValidException(HttpServletRequest request, TokenValidException ex) {
     log.error("[TOKEN-ERROR] ip={}, message={}", getClientIp(request), ex.getMessage());
-    String message = String.format("토큰 유효성 검사에 실패하였습니다.[%s]", ex.getMessage());
+    String message = String.format("토큰 유효성 검사에 i실패하였습니다.[%s]", ex.getMessage());
     return ResponseEntity
         .status(HttpStatus.BAD_REQUEST)
-        .body(CommonResponse.builder()
+        .body(TokenVerifyResponse.builder()
             .code(HttpStatus.BAD_REQUEST.value())
+            .status(Status.FAIL)
             .message(message)
             .build()
         );
   }
-
 
   @ExceptionHandler(MethodArgumentNotValidException.class)
   public ResponseEntity handleValidationExceptions(HttpServletRequest request,

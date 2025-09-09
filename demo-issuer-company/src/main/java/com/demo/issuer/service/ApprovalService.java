@@ -1,9 +1,11 @@
 package com.demo.issuer.service;
 
+import com.demo.issuer.dto.TokenVerifyResponse;
 import com.demo.issuer.entity.TokenApproval;
 import com.demo.issuer.enums.ApprovalStatus;
 import com.demo.issuer.enums.Status;
 import com.demo.issuer.repository.TokenApprovalRepository;
+import java.util.Optional;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestClient;
@@ -31,7 +33,10 @@ public class ApprovalService {
   @Transactional
   public String approveToken(String tokenValue) {
 
-    ApprovalStatus status = Status.SUCCESS.lower().equals(validateToken(tokenValue)) ?
+    // success 혹은 fail
+    TokenVerifyResponse validationResult = validateToken(tokenValue);
+
+    ApprovalStatus status = Status.SUCCESS.lower().equals(validationResult.getStatus().lower()) ?
         ApprovalStatus.APPROVED : ApprovalStatus.REJECTED;
 
     TokenApproval approval = TokenApproval.builder()
@@ -44,11 +49,20 @@ public class ApprovalService {
         : ApprovalStatus.REJECTED.lower();
   }
 
-  private String validateToken(String tokenValue) {
-    return restClient.post()
+
+  private TokenVerifyResponse validateToken(String tokenValue) {
+
+    Optional<TokenVerifyResponse> restResponse = restClient.post()
         .uri("/token/verify")
         .body(tokenValue)
-        .retrieve()
-        .body(String.class);
+        .exchange((request, response) ->
+            Optional.ofNullable(response.bodyTo(TokenVerifyResponse.class))
+        );
+
+    if (restResponse.isEmpty()) {
+      throw new RuntimeException("Token validation failed");
+    }
+
+    return restResponse.get();
   }
 }

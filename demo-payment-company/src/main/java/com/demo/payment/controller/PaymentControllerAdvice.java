@@ -3,6 +3,8 @@ package com.demo.payment.controller;
 import static com.demo.payment.utils.IpUtils.getClientIp;
 
 import com.demo.payment.dto.common.CommonResponse;
+import com.demo.payment.exception.IssuerResponseException;
+import com.demo.payment.exception.TokenResponseException;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -18,6 +20,34 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 @RequiredArgsConstructor
 @Slf4j
 public class PaymentControllerAdvice {
+
+  @ExceptionHandler(IssuerResponseException.class)
+  public ResponseEntity IssuerResponseException(HttpServletRequest request,
+      IssuerResponseException ex) {
+    log.error("[ISSUER-ERROR] ip={}, message={}", getClientIp(request), ex.getMessage());
+    String message = String.format("결제 승인에 실패하였습니다.[%s]", ex.getMessage());
+    return ResponseEntity
+        .status(HttpStatus.BAD_REQUEST)
+        .body(CommonResponse.builder()
+            .code(HttpStatus.BAD_REQUEST.value())
+            .message(message)
+            .build()
+        );
+  }
+
+  @ExceptionHandler(TokenResponseException.class)
+  public ResponseEntity TokenResponseException(HttpServletRequest request,
+      TokenResponseException ex) {
+    log.error("[TOKEN-ERROR] ip={}, message={}", getClientIp(request), ex.getMessage());
+    String message = String.format("토큰 유효성 검사에 실패하였습니다.[%s]", ex.getMessage());
+    return ResponseEntity
+        .status(HttpStatus.BAD_REQUEST)
+        .body(CommonResponse.builder()
+            .code(HttpStatus.BAD_REQUEST.value())
+            .message(message)
+            .build()
+        );
+  }
 
   @ExceptionHandler(MethodArgumentNotValidException.class)
   public ResponseEntity handleValidationExceptions(HttpServletRequest request,
