@@ -46,21 +46,58 @@ export default function Payment() {
 
   const handleCardRegister = async (e: React.FormEvent) => {
     e.preventDefault()
+
+    let {cardNumber, expiryMonth, expiryYear, cvv} = cardForm;
+
+    // 카드번호 유효성 검사
+    if (cardNumber.includes('-')) {
+      if (!/^\d{4}-\d{4}-\d{4}-\d{4}$/.test(cardNumber)) {
+        alert('카드번호 형식이 잘못되었습니다')
+        return;
+      }
+    } else {
+      if (!/^\d{16}$/.test(cardNumber)) {
+        alert('카드번호는 16자리 숫자여야 합니다.')
+        return;
+      }
+      cardNumber = cardNumber.replace(/(\d{4})(\d{4})(\d{4})(\d{4})/, '$1-$2-$3-$4')
+      setCardForm(prev => ({...prev, cardNumber}))
+    }
+
+    // 만료월 유효성 검사
+    const month = parseInt(expiryMonth);
+    if (!/^\d{1,2}$/.test(expiryMonth) || month < 1 || month > 12) {
+      alert('만료월은 1~12 사이의 숫자여야 합니다.');
+      return;
+    }
+
+    // 만료년 유효성 검사
+    if (!/^\d{2}$/.test(expiryYear)) {
+      alert('만료년은 두자리 숫자여야 합니다.');
+      return;
+    }
+
+    // CVV 유효성 검사
+    if (!/^\d{3}$/.test(cvv)) {
+      alert('CVV는 세자리 숫자여야 합니다.')
+      return;
+    }
+
     try {
       const response = await fetch('http://localhost:8000/payment/card/register', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({
           ci,
-          cardNumber: cardForm.cardNumber,
-          expiryDate: cardForm.expiryMonth + "/" + cardForm.expiryYear,
-          cvv: cardForm.cvv
+          cardNumber,
+          expiryDate: expiryMonth + "/" + expiryYear,
+          cvv
         })
       })
 
       if (response.ok) {
         const result = await response.json()
-        const newCard: Card = {...cardForm, cardRefId: result.cardRefId}
+        const newCard: Card = {...cardForm, cardNumber, cardRefId: result.cardRefId}
         const updatedCards = [...cards, newCard]
         setCards(updatedCards)
         sessionStorage.setItem('cards', JSON.stringify(updatedCards))
