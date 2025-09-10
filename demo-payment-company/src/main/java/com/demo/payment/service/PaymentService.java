@@ -13,12 +13,14 @@ import com.demo.payment.entity.Payment;
 import com.demo.payment.enums.ApprovalStatus;
 import com.demo.payment.enums.PaymentStatus;
 import com.demo.payment.enums.Status;
+import com.demo.payment.exception.CardRefResponseException;
 import com.demo.payment.exception.IssuerResponseException;
 import com.demo.payment.exception.TokenResponseException;
 import com.demo.payment.repository.PaymentRepository;
 import jakarta.transaction.Transactional;
 import java.util.Optional;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
 
@@ -127,6 +129,12 @@ public class PaymentService {
 
     if (restResponse.isEmpty()) {
       throw new TokenResponseException("토큰 서비스의 잘못된 응답 -> %s", TOKEN_CARD_REF);
+    }
+
+    CardReferenceResponse cardRefResponse = restResponse.get();
+    if (cardRefResponse.getCode() != HttpStatus.OK.value()) {
+      throw new CardRefResponseException("CardRefId 발급 실패 message:%s",
+          cardRefResponse.getMessage());
     }
 
     return restResponse.get();

@@ -79,6 +79,8 @@ public class TokenService {
     CardReference response = cardReferenceRepository.save(cardReference);
 
     return CardReferenceResponse.builder()
+        .code(HttpStatus.OK.value())
+        .message("")
         .cardRefId(response.getCardRefId())
         .build();
   }
