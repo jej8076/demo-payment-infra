@@ -1,5 +1,6 @@
 package com.demo.issuer.controller;
 
+import com.demo.issuer.dto.ApproveTokenResponse;
 import com.demo.issuer.service.ApprovalService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -16,8 +17,8 @@ public class ApprovalController {
   private final ApprovalService approvalService;
 
   @PostMapping("/approve/token")
-  public ResponseEntity<String> approveToken(@RequestBody String tokenValue) {
-    String result = approvalService.approveToken(tokenValue);
+  public ResponseEntity<ApproveTokenResponse> approveToken(@RequestBody String tokenValue) {
+    ApproveTokenResponse result = approvalService.approveToken(tokenValue);
     return ResponseEntity.ok(result);
   }
 }

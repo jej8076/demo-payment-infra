@@ -1,5 +1,6 @@
 package com.demo.payment.service;
 
+import com.demo.payment.dto.ApproveTokenResponse;
 import com.demo.payment.dto.CardReferenceResponse;
 import com.demo.payment.dto.CardRegistryRequest;
 import com.demo.payment.dto.CardRegistryResponse;
@@ -9,6 +10,7 @@ import com.demo.payment.dto.TokenGenerateResponse;
 import com.demo.payment.dto.encrypt.HybridPayload;
 import com.demo.payment.encrypt.HybridEncryptor;
 import com.demo.payment.entity.Payment;
+import com.demo.payment.enums.ApprovalStatus;
 import com.demo.payment.enums.PaymentStatus;
 import com.demo.payment.enums.Status;
 import com.demo.payment.exception.IssuerResponseException;
@@ -95,12 +97,12 @@ public class PaymentService {
     // TODO 실패 시 실패 이유를 응답받도록 해야함
     TokenGenerateResponse tokenGenerateResponse = requestToken(generateRequest);
 
-    String approvalState = requestApproval(tokenGenerateResponse.getToken());
+    ApproveTokenResponse approval = requestApproval(tokenGenerateResponse.getToken());
 
-    if (Status.FAIL.lower().equals(approvalState)) {
+    if (ApprovalStatus.REJECTED.equals(approval.getApprovalStatus())) {
       payment.changeStatus(PaymentStatus.REJECTED);
       paymentRepository.save(payment);
-      return approvalState;
+      return Status.FAIL.lower();
     }
 
     payment.changeStatus(PaymentStatus.APPROVED);
@@ -151,19 +153,26 @@ public class PaymentService {
     return restResponse.get();
   }
 
-  private String requestApproval(String cardRefId) {
-    Optional<String> restResponse = issuerRestClient.post()
+  private ApproveTokenResponse requestApproval(String cardRefId) {
+    Optional<ApproveTokenResponse> restResponse = issuerRestClient.post()
         .uri(ISSUER_APPROVE_TOKEN)
         .body(cardRefId)
         .exchange((request, response) ->
-            Optional.ofNullable(response.bodyTo(String.class))
+            Optional.ofNullable(response.bodyTo(ApproveTokenResponse.class))
         );
 
     if (restResponse.isEmpty()) {
       throw new IssuerResponseException("BAD_RESPONSE_ISSUER -> %s", ISSUER_APPROVE_TOKEN);
     }
 
-    return restResponse.get();
+    ApproveTokenResponse approveResponse = restResponse.get();
+
+    if (ApprovalStatus.REJECTED.equals(approveResponse.getApprovalStatus())) {
+      throw new IssuerResponseException("INVALID_RESPONSE_ISSUER message:%s",
+          approveResponse.getMessage());
+    }
+
+    return approveResponse;
   }
 
   private void ajustCardInfo(CardRegistryRequest request) {

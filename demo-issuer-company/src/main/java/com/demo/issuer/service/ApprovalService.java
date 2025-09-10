@@ -1,11 +1,13 @@
 package com.demo.issuer.service;
 
+import com.demo.issuer.dto.ApproveTokenResponse;
 import com.demo.issuer.dto.TokenVerifyResponse;
 import com.demo.issuer.entity.TokenApproval;
 import com.demo.issuer.enums.ApprovalStatus;
 import com.demo.issuer.enums.Status;
 import com.demo.issuer.repository.TokenApprovalRepository;
 import java.util.Optional;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestClient;
@@ -31,7 +33,7 @@ public class ApprovalService {
    * @return
    */
   @Transactional
-  public String approveToken(String tokenValue) {
+  public ApproveTokenResponse approveToken(String tokenValue) {
 
     TokenVerifyResponse validationResult = validateToken(tokenValue);
 
@@ -44,10 +46,13 @@ public class ApprovalService {
         .build();
     tokenApprovalRepository.save(approval);
 
-    return status == ApprovalStatus.APPROVED ? ApprovalStatus.APPROVED.lower()
-        : ApprovalStatus.REJECTED.lower();
+    return ApproveTokenResponse.builder()
+        .code(ApprovalStatus.APPROVED == status ? HttpStatus.OK.value()
+            : HttpStatus.BAD_REQUEST.value())
+        .message(validationResult.getMessage())
+        .approvalStatus(status)
+        .build();
   }
-
 
   private TokenVerifyResponse validateToken(String tokenValue) {
 

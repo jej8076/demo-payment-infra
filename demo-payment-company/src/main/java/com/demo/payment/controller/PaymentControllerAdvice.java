@@ -3,6 +3,7 @@ package com.demo.payment.controller;
 import static com.demo.payment.utils.IpUtils.getClientIp;
 
 import com.demo.payment.dto.common.CommonResponse;
+import com.demo.payment.enums.Status;
 import com.demo.payment.exception.IssuerResponseException;
 import com.demo.payment.exception.TokenResponseException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -30,6 +31,7 @@ public class PaymentControllerAdvice {
         .status(HttpStatus.BAD_REQUEST)
         .body(CommonResponse.builder()
             .code(HttpStatus.BAD_REQUEST.value())
+            .status(Status.FAIL)
             .message(message)
             .build()
         );

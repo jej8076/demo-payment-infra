@@ -45,7 +45,7 @@ public class TokenService {
       throw new TokenValidException("ALREADY_USED_TOKEN token:%s", token);
     }
 
-    if (tokenEntity.getExpiresAt().isAfter(LocalDateTime.now())) {
+    if (tokenEntity.getExpiresAt().isBefore(LocalDateTime.now())) {
       throw new TokenValidException("TOKEN_EXPIRED token:%s", token);
     }
 

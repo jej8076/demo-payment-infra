@@ -42,7 +42,7 @@ public class TokenControllerAdvice {
   @ExceptionHandler(TokenValidException.class)
   public ResponseEntity TokenValidException(HttpServletRequest request, TokenValidException ex) {
     log.error("[TOKEN-ERROR] ip={}, message={}", getClientIp(request), ex.getMessage());
-    String message = String.format("토큰 유효성 검사에 i실패하였습니다.[%s]", ex.getMessage());
+    String message = String.format("토큰 유효성 검사에 실패하였습니다.[%s]", ex.getMessage());
     return ResponseEntity
         .status(HttpStatus.BAD_REQUEST)
         .body(TokenVerifyResponse.builder()
