@@ -162,7 +162,6 @@ export default function Payment() {
                     type="text"
                     value={cardForm.cardNumber}
                     onChange={(e) => setCardForm({...cardForm, cardNumber: e.target.value})}
-                    placeholder="1111-2222-3333-4444"
                     required
                 />
               </div>
