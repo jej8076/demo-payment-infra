@@ -28,6 +28,7 @@ import org.springframework.web.client.RestClient;
 public class PaymentService {
 
   private final PaymentRepository paymentRepository;
+  private final PaymentSaverService paymentSaverService;
   private final HybridEncryptor hybridEncryptor;
   private final RestClient tokenRestClient;
   private final RestClient issuerRestClient;
@@ -35,10 +36,12 @@ public class PaymentService {
   private final String TOKEN_GENERATE = "/token/generate";
   private final String ISSUER_APPROVE_TOKEN = "/issuer/approve/token";
 
-  public PaymentService(PaymentRepository paymentRepository, HybridEncryptor hybridEncryptor,
+  public PaymentService(PaymentRepository paymentRepository,
+      PaymentSaverService paymentSaverService, HybridEncryptor hybridEncryptor,
       @Qualifier("tokenRestClient") RestClient tokenClient,
       @Qualifier("issuerRestClient") RestClient issuerClient) {
     this.paymentRepository = paymentRepository;
+    this.paymentSaverService = paymentSaverService;
     this.hybridEncryptor = hybridEncryptor;
     this.tokenRestClient = tokenClient;
     this.issuerRestClient = issuerClient;
@@ -88,7 +91,7 @@ public class PaymentService {
         .sellerId(request.getSellerId())
         .build();
 
-    paymentRepository.save(payment);
+    paymentSaverService.saveByNewTransaction(payment);
 
     TokenGenerateRequest generateRequest = TokenGenerateRequest.builder()
         .ci(request.getCi())
